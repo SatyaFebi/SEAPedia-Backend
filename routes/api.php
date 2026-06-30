@@ -29,10 +29,6 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
 
-    // Order detail route accessible by authorized parties
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
-    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-
     // Vouchers & Promos (General authenticated endpoints)
     Route::get('/vouchers', [DiscountController::class, 'listVouchers']);
     Route::get('/promos', [DiscountController::class, 'listPromos']);
@@ -101,4 +97,8 @@ Route::middleware('auth.token')->group(function () {
         Route::get('/driver/my-jobs', [DeliveryController::class, 'myJobs']);
         Route::get('/driver/earnings', [DeliveryController::class, 'earnings']);
     });
+
+    // Order detail route accessible by authorized parties (placed at bottom to prevent wildcard matching issues)
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
 });
