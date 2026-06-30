@@ -1,52 +1,53 @@
-🤖 BACKEND: SEAPEDIA BACKEND (LARAVEL + SUPABASE)
+# ⚙️ SEAPEDIA - Backend (Laravel REST API)
 
-Project Overview
-You are an expert backend developer agent. Your task is to build and maintain the RESTful API for SEAPEDIA, a multi-role e-commerce marketplace platform. The backend is built using Laravel 11 (PHP 8.2+) and uses Supabase (PostgreSQL) as its primary database. Authentication and role management are handled via Spatie Laravel Permission.
+## 📖 Overview
+The backend of SEAPEDIA is a stateless RESTful API built with **Laravel 11**. It serves as the brain of the marketplace, strictly enforcing complex business logic, Role-Based Access Control (RBAC), transactional integrity, and automated background tasks for service level agreements (SLA).
 
-## Technical Stack & Constraints
-- Framework: Laravel 11 (API-only mode).
+## 🛠 Tech Stack
+*   **Framework**: Laravel (REST API architecture)
+*   **Authentication**: Laravel Sanctum (Stateful cookie-based auth for SPA)
+*   **Database**: MySQL / PostgreSQL
+*   **Validation**: Laravel Form Requests
+*   **Security**: Eloquent ORM (SQL Injection prevention), API Resources
 
-- Database: PostgreSQL via Supabase.
+## 🏗️ Core Architecture & Business Logic
 
-- Primary Keys: Must use UUID (gen_random_uuid()) for all major tables except the static roles table.
+### 1. Dynamic RBAC & Active Role Enforcement
+*   **Role Mapping**: A user can have multiple roles. The API strictly validates requests based on the user's *currently active role session*, not just their database capabilities.
+*   **Policies & Gates**: Extensive use of Laravel Policies. For example, `ProductPolicy` ensures a Seller can only update/delete products belonging to their own `store_id`.
 
-- Role Management: Spatie Laravel Permission (configured to support UUID for model_uuid).
+### 2. Transactional Integrity & Checkout Logic
+*   **Single-Store Validation**: The checkout endpoint validates that all `product_ids` in the payload belong to the same `store_id`.
+*   **Financial Engine**: Backend calculates Subtotal, applies Voucher/Promo rules (validating expiry and limits), adds Delivery Fees, and accurately calculates the **12% PPN**.
+*   **DB Transactions**: Checkout uses `DB::transaction()` to ensure stock reduction, wallet deduction, and order creation happen atomically. If any step fails, the entire transaction rolls back.
 
-- CORS: Enabled to accept requests from the Vercel frontend domain.
+### 3. Automated Overdue Handling (SLA)
+*   **Time-based Commands**: Utilizes Laravel Task Scheduling / Console Commands to sweep for overdue orders (Instant, Next Day, Regular).
+*   **Auto-Refund Mechanism**: When an order is overdue, the system safely reverses the transaction: restores the Buyer's wallet balance, increments Seller's product stock, and updates the order status to `Dikembalikan` (Returned) while preventing double-refunds.
 
-## Strict Core Business Rules for Backend
-1. Multi-Role & Active Session: A user can have multiple non-admin roles (Buyer, Seller, Driver). However, authorization must be checked against an Active Role stored in the session/token/user record, NOT just the list of all roles they own. Create custom middleware to enforce this.
+## 🚀 Backend API Milestones (Level 1-7)
 
-2. Single-Store Checkout: The carts table has a nullable store_id. When adding the first item, lock the carts.store_id to that product's store. Block any subsequent items from different stores unless the cart is cleared.
-
-3. Order Lifecycle Tracking: Statuses must strictly transition through: Sedang Dikemas ➔ Menunggu Pengirim ➔ Sedang Dikirim ➔ Pesanan Selesai OR Dikembalikan. Every transition MUST log a row into order_status_histories.
-
-4. Overdue & Simulation SLA: Implement a custom setting or mechanism to simulate time progression ("Next Day"). This should trigger a command/endpoint to auto-refund/auto-return expired orders according to their delivery method SLA (Instant, Next Day, Regular).
-
-## Database Architecture Reference
-Expect and follow this table schema hierarchy during generation:
-
-- users (UUID primary key)
-
-- roles & model_has_roles (Spatie standard tables, modified for UUID)
-
-- stores (One-to-one relation with users via user_id unique constraint)
-
-- products (Belongs to stores)
-
-- buyer_wallets & wallet_transactions
-
-- carts & cart_items
-
-- discounts (Handles both Voucher and Promo logic)
-
-- orders, order_items, & order_status_histories
-
-- application_reviews
-
-## Security Hardening Directives (Level 7)
-- Always use Eloquent ORM or parameterized queries to prevent SQL Injection.
-
-- Sanitasi string on inputs, especially for application_reviews.comment to prevent XSS.
-
-- Enforce server-side ownership checks: A Seller cannot modify another Seller's product; a Buyer cannot view another Buyer's order details.
+*   **Level 1: Auth & Role Infrastructure**
+    *   `POST /api/login`, `POST /api/register`, `POST /api/role/active`.
+    *   Protected route groups utilizing Sanctum middleware.
+    *   Public endpoint for storing and fetching Application Reviews.
+*   **Level 2: Seller & Product APIs**
+    *   Store uniqueness validation in Form Requests.
+    *   CRUD endpoints for Products under `api/seller/products`, strictly scoped to the authenticated Seller's store.
+*   **Level 3: Wallet, Cart & Checkout APIs**
+    *   Wallet balance endpoints and dummy top-up logic.
+    *   `POST /api/checkout`: Complex transaction logic handling Single-Store constraint, balance checking, and initial status generation (`Sedang Dikemas`).
+*   **Level 4: Discount Validation & Order State Machine**
+    *   Voucher/Promo models with usage tracking.
+    *   `PATCH /api/seller/orders/{id}/process`: Advances order status to `Menunggu Pengirim`.
+    *   Transaction history and reporting queries.
+*   **Level 5: Delivery & Driver APIs**
+    *   `GET /api/driver/jobs`: Fetches only orders with status `Menunggu Pengirim`.
+    *   Job claiming logic utilizing database locks (pessimistic locking) to prevent two Drivers from claiming the same order.
+*   **Level 6: Admin & Overdue Automation**
+    *   Admin statistical endpoints.
+    *   `php artisan seapedia:process-overdue` command (or API trigger for demo purposes) to simulate Next Day and execute auto-refunds.
+*   **Level 7: Security & Finalization**
+    *   SQL Injection prevention via strict Eloquent usage.
+    *   Input sanitization and comprehensive Form Requests.
+    *   Swagger/OpenAPI documentation and complete database seeders for all user roles and dummy data.
