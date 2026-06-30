@@ -52,18 +52,21 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string|max:5000',
+            'price' => 'required|numeric|min:1',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|string',
+            'image' => 'nullable|string|max:2048',
             'category' => 'nullable|string|in:Kuliner,Otomotif',
         ]);
+
+        $cleanName = strip_tags($validated['name']);
+        $cleanDesc = isset($validated['description']) ? strip_tags($validated['description']) : null;
 
         $product = Product::create([
             'id' => (string) Str::uuid(),
             'store_id' => $store->id,
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
+            'name' => $cleanName,
+            'description' => $cleanDesc,
             'price' => $validated['price'],
             'stock' => $validated['stock'],
             'image' => $validated['image'] ?? null,
@@ -134,16 +137,19 @@ class ProductController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string|max:5000',
+            'price' => 'required|numeric|min:1',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|string',
+            'image' => 'nullable|string|max:2048',
             'category' => 'nullable|string|in:Kuliner,Otomotif',
         ]);
 
+        $cleanName = strip_tags($validated['name']);
+        $cleanDesc = isset($validated['description']) ? strip_tags($validated['description']) : null;
+
         $product->update([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
+            'name' => $cleanName,
+            'description' => $cleanDesc,
             'price' => $validated['price'],
             'stock' => $validated['stock'],
             'image' => $validated['image'] ?? null,

@@ -1,0 +1,1199 @@
+openapi: 3.0.3
+info:
+  title: SEAPedia Marketplace API
+  description: |
+    RESTful API for SEAPedia — a multi-role e-commerce marketplace supporting Buyers, Sellers, Drivers, and Admins.
+
+    ## Authentication
+    All protected endpoints require a Bearer token in the Authorization header:
+    ```
+    Authorization: Bearer <token>
+    ```
+    Token is obtained via login or register.
+
+    ## Role Selection
+    Protected role-specific endpoints additionally require:
+    ```
+    X-Active-Role: Buyer | Seller | Driver | Admin
+    ```
+    The backend validates that the user actually possesses this role.
+
+    ## Demo Accounts (password: `password123`)
+    | Username | Email | Roles |
+    |----------|-------|-------|
+    | budi | budi@seapedia.test | Buyer, Seller |
+    | agus | agus@seapedia.test | Buyer, Seller, Driver |
+    | siti | siti@seapedia.test | Buyer, Driver |
+    | admin | admin@seapedia.test | Admin |
+
+  version: 1.0.0
+  contact:
+    name: SEAPedia Team
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local Development Server
+
+tags:
+  - name: Auth
+    description: Registration, login, profile, logout
+  - name: Reviews
+    description: Public application reviews
+  - name: Products
+    description: Product catalog and management
+  - name: Stores
+    description: Store management
+  - name: Wallet
+    description: Buyer wallet and top-up
+  - name: Addresses
+    description: Buyer delivery addresses
+  - name: Cart
+    description: Shopping cart management
+  - name: Orders
+    description: Checkout, order tracking, status management
+  - name: Discounts
+    description: Vouchers and promos
+  - name: Driver
+    description: Driver delivery jobs and earnings
+  - name: Admin
+    description: Admin monitoring and management
+
+paths:
+  # ───────────── AUTH ─────────────
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, username, email, password, roles]
+              properties:
+                name:
+                  type: string
+                  example: Budi Santoso
+                username:
+                  type: string
+                  example: budi
+                email:
+                  type: string
+                  format: email
+                  example: budi@seapedia.test
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                roles:
+                  type: array
+                  items:
+                    type: string
+                    enum: [Buyer, Seller, Driver]
+                  example: [Buyer, Seller]
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login with username or email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  description: Username or email address
+                  example: budi
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /profile:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate token
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  # ───────────── REVIEWS ─────────────
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: List all public application reviews
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+    post:
+      tags: [Reviews]
+      summary: Submit an application review (guest or authenticated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reviewer_name, rating, comment]
+              properties:
+                reviewer_name:
+                  type: string
+                  maxLength: 255
+                  example: Budi Santoso
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 5
+                comment:
+                  type: string
+                  maxLength: 2000
+                  example: Aplikasi sangat bagus dan mudah digunakan!
+      responses:
+        '201':
+          description: Review submitted
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ───────────── PRODUCTS ─────────────
+  /products:
+    get:
+      tags: [Products]
+      summary: List all products (public)
+      parameters:
+        - name: store_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter products by store
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      tags: [Products]
+      summary: Create a product (Seller only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Get a single product (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+    put:
+      tags: [Products]
+      summary: Update a product (Seller — must own the product)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Products]
+      summary: Delete a product (Seller — must own the product)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Product deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ───────────── STORES ─────────────
+  /stores/{id}:
+    get:
+      tags: [Stores]
+      summary: Get store details (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Store detail
+
+  /store:
+    post:
+      tags: [Stores]
+      summary: Create a store (Seller only, one per user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [store_name]
+              properties:
+                store_name:
+                  type: string
+                  example: Warung Budi
+      responses:
+        '201':
+          description: Store created
+
+  /store/my:
+    get:
+      tags: [Stores]
+      summary: Get authenticated seller's own store
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: My store detail
+
+  # ───────────── WALLET ─────────────
+  /wallet:
+    get:
+      tags: [Wallet]
+      summary: Get buyer wallet balance and transaction history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletInfo'
+
+  /wallet/topup:
+    post:
+      tags: [Wallet]
+      summary: Top up wallet balance (dummy top-up, Buyer only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000000
+                  example: 100000
+      responses:
+        '200':
+          description: Top-up successful
+
+  # ───────────── ADDRESSES ─────────────
+  /addresses:
+    get:
+      tags: [Addresses]
+      summary: List buyer's delivery addresses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Address list
+    post:
+      tags: [Addresses]
+      summary: Add a delivery address
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address_details]
+              properties:
+                address_details:
+                  type: string
+                  maxLength: 1000
+                  example: Jl. Sudirman No. 10, Jakarta
+                is_main:
+                  type: boolean
+                  example: true
+      responses:
+        '201':
+          description: Address added
+
+  /addresses/{id}:
+    put:
+      tags: [Addresses]
+      summary: Update a delivery address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address_details]
+              properties:
+                address_details:
+                  type: string
+                is_main:
+                  type: boolean
+      responses:
+        '200':
+          description: Address updated
+    delete:
+      tags: [Addresses]
+      summary: Delete a delivery address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Address deleted
+
+  # ───────────── CART ─────────────
+  /cart:
+    get:
+      tags: [Cart]
+      summary: View current cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Cart contents
+    delete:
+      tags: [Cart]
+      summary: Clear the cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Cart cleared
+
+  /cart/items:
+    post:
+      tags: [Cart]
+      summary: Add item to cart (single-store constraint enforced)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, quantity]
+              properties:
+                product_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  minimum: 1
+                force:
+                  type: boolean
+                  description: If true, clears existing cart and adds item from new store
+      responses:
+        '200':
+          description: Item added
+        '409':
+          description: Cart conflict - contains items from a different store
+
+  /cart/items/{itemId}:
+    put:
+      tags: [Cart]
+      summary: Update item quantity (set to 0 to remove)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Quantity updated
+    delete:
+      tags: [Cart]
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Item removed
+
+  # ───────────── ORDERS ─────────────
+  /checkout:
+    post:
+      tags: [Orders]
+      summary: Checkout cart (Buyer only)
+      description: |
+        Deducts wallet balance. PPN 12% applied to (subtotal - discount).
+        Delivery fees: Regular=9000, Next Day=15000, Instant=30000.
+        Single-store checkout enforced at cart level.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delivery_method, shipping_address]
+              properties:
+                delivery_method:
+                  type: string
+                  enum: [Regular, Next Day, Instant]
+                shipping_address:
+                  type: string
+                  maxLength: 1000
+                voucher_code:
+                  type: string
+                  description: Optional voucher code
+                  example: SEAPEDIA10
+                discount_code:
+                  type: string
+                  description: Optional promo code
+      responses:
+        '201':
+          description: Checkout successful
+        '400':
+          description: Insufficient balance or stock
+        '422':
+          description: Invalid discount code
+
+  /orders/buyer:
+    get:
+      tags: [Orders]
+      summary: List buyer's own orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Buyer order list
+
+  /orders/seller:
+    get:
+      tags: [Orders]
+      summary: List orders for seller's store
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Seller order list
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get order detail (Buyer, Seller, Driver, or Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order detail
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /orders/{id}/process:
+    post:
+      tags: [Orders]
+      summary: Seller processes order (Sedang Dikemas → Menunggu Pengirim)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Order processed
+
+  /orders/{id}/status:
+    post:
+      tags: [Orders]
+      summary: Update order status (role-constrained)
+      description: |
+        - Seller: Sedang Dikemas → Menunggu Pengirim
+        - Driver: Menunggu Pengirim → Sedang Dikirim → Pesanan Selesai / Dikembalikan
+        - Admin: Any transition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [Sedang Dikemas, Menunggu Pengirim, Sedang Dikirim, Pesanan Selesai, Dikembalikan]
+      responses:
+        '200':
+          description: Status updated
+        '400':
+          description: Invalid transition for your role
+
+  # ───────────── DISCOUNTS ─────────────
+  /vouchers:
+    get:
+      tags: [Discounts]
+      summary: List all vouchers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Voucher list
+
+  /promos:
+    get:
+      tags: [Discounts]
+      summary: List all promos
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Promo list
+
+  /vouchers/{code}:
+    get:
+      tags: [Discounts]
+      summary: Get voucher by code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: SEAPEDIA10
+      responses:
+        '200':
+          description: Voucher detail
+
+  /promos/{code}:
+    get:
+      tags: [Discounts]
+      summary: Get promo by code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PROMO20
+      responses:
+        '200':
+          description: Promo detail
+
+  /discounts/validate:
+    post:
+      tags: [Discounts]
+      summary: Validate a discount code before checkout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, subtotal]
+              properties:
+                code:
+                  type: string
+                  example: SEAPEDIA10
+                subtotal:
+                  type: number
+                  example: 100000
+      responses:
+        '200':
+          description: Discount valid with calculated amount
+        '404':
+          description: Code not found
+        '422':
+          description: Expired or used up
+
+  /admin/vouchers:
+    post:
+      tags: [Admin, Discounts]
+      summary: Create a voucher (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, amount_type, value, max_usage, expiry_date]
+              properties:
+                code:
+                  type: string
+                  maxLength: 50
+                amount_type:
+                  type: string
+                  enum: [FIXED, PERCENTAGE]
+                value:
+                  type: number
+                  description: For PERCENTAGE, max 100
+                max_usage:
+                  type: integer
+                  minimum: 1
+                expiry_date:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Voucher created
+
+  /admin/promos:
+    post:
+      tags: [Admin, Discounts]
+      summary: Create a promo (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '201':
+          description: Promo created
+
+  # ───────────── DRIVER ─────────────
+  /driver/jobs:
+    get:
+      tags: [Driver]
+      summary: List available delivery jobs (status=Menunggu Pengirim, no driver assigned)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Available job list
+
+  /driver/jobs/{orderId}:
+    get:
+      tags: [Driver]
+      summary: Get job details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Job details
+
+  /driver/jobs/{orderId}/take:
+    post:
+      tags: [Driver]
+      summary: Take an available delivery job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Job taken
+
+  /driver/jobs/{orderId}/complete:
+    post:
+      tags: [Driver]
+      summary: Mark a delivery as complete
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Job completed
+
+  /driver/my-jobs:
+    get:
+      tags: [Driver]
+      summary: List driver's own job history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Job history
+
+  /driver/earnings:
+    get:
+      tags: [Driver]
+      summary: Get driver earnings summary
+      description: |
+        Earning rule: 10% of delivery fee per completed order.
+        (Regular: Rp 900, Next Day: Rp 1.500, Instant: Rp 3.000)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Earnings data
+
+  # ───────────── ADMIN ─────────────
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard summary statistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Dashboard stats
+
+  /admin/orders:
+    get:
+      tags: [Admin]
+      summary: List all orders (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: All orders
+
+  /admin/delivery-jobs:
+    get:
+      tags: [Admin]
+      summary: List all delivery jobs (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: All deliveries
+
+  /admin/process-overdue:
+    post:
+      tags: [Admin]
+      summary: Manually trigger overdue SLA processing
+      description: |
+        Processes orders past their SLA deadline and triggers auto-refund.
+        SLA Deadlines:
+        - Instant: 3 hours from order creation
+        - Next Day: Next day 23:59 (before 13:00 cutoff) or Day+2 23:59
+        - Regular: 5 days from order creation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Overdue orders processed
+
+  /admin/simulate-next-day:
+    post:
+      tags: [Admin]
+      summary: Simulate time progression by 24 hours (for SLA testing)
+      description: |
+        Advances the internal simulated clock by 24 hours. Automatically
+        triggers overdue processing for any orders that now exceed their SLA.
+        Call this endpoint multiple times to simulate multiple days passing.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ActiveRole'
+      responses:
+        '200':
+          description: Time simulated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API token from login/register
+
+  parameters:
+    ActiveRole:
+      name: X-Active-Role
+      in: header
+      required: true
+      schema:
+        type: string
+        enum: [Buyer, Seller, Driver, Admin]
+      description: The currently active role for this request
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    Forbidden:
+      description: Access denied for this role or resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errors:
+                type: object
+
+  schemas:
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+          description: 80-character random API token. Refreshed on each login. Nullified on logout.
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        walletBalance:
+          type: number
+        address:
+          type: string
+          nullable: true
+        store:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        store_name:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price:
+          type: number
+          minimum: 1
+        stock:
+          type: integer
+          minimum: 0
+        image:
+          type: string
+          nullable: true
+        category:
+          type: string
+          enum: [Kuliner, Otomotif]
+
+    ProductInput:
+      type: object
+      required: [name, price, stock]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 5000
+        price:
+          type: number
+          minimum: 1
+        stock:
+          type: integer
+          minimum: 0
+        image:
+          type: string
+          maxLength: 2048
+        category:
+          type: string
+          enum: [Kuliner, Otomotif]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        date:
+          type: string
+          format: date
+
+    WalletInfo:
+      type: object
+      properties:
+        balance:
+          type: number
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              amount:
+                type: number
+              type:
+                type: string
+                enum: [TOPUP, PAYMENT, REFUND]
+              description:
+                type: string
+              created_at:
+                type: string
+                format: date-time

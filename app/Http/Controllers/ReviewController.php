@@ -49,7 +49,7 @@ class ReviewController extends Controller
         $validated = $request->validate([
             'reviewer_name' => 'required|string|max:255',
             'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'required|string',
+            'comment' => 'required|string|max:2000',
         ]);
 
         $userId = null;
@@ -58,12 +58,15 @@ class ReviewController extends Controller
             $userId = $user->id;
         }
 
+        $reviewerName = strip_tags($validated['reviewer_name']);
+        $cleanComment = strip_tags($validated['comment']);
+
         $review = ApplicationReview::create([
             'id' => (string) Str::uuid(),
             'user_id' => $userId,
-            'reviewer_name' => $validated['reviewer_name'],
+            'reviewer_name' => $reviewerName,
             'rating' => $validated['rating'],
-            'comment' => $validated['comment'],
+            'comment' => $cleanComment,
         ]);
 
         $role = 'Guest';

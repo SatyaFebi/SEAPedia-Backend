@@ -28,8 +28,8 @@ class AuthController extends Controller
         // Create user
         $user = User::create([
             'id' => (string) Str::uuid(),
-            'name' => $validated['name'],
-            'username' => strtolower($validated['username']),
+            'name' => strip_tags($validated['name']),
+            'username' => strtolower(strip_tags($validated['username'])),
             'email' => strtolower($validated['email']),
             'password' => Hash::make($validated['password']),
             'api_token' => Str::random(80),

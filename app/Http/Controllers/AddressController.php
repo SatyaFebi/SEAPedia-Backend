@@ -25,8 +25,9 @@ class AddressController extends Controller
 
         $user = auth()->user();
         $isMain = $validated['is_main'] ?? false;
+        $cleanAddress = strip_tags($validated['address_details']);
 
-        $address = DB::transaction(function () use ($user, $validated, $isMain) {
+        $address = DB::transaction(function () use ($user, $cleanAddress, $isMain) {
             $currentIsMain = $isMain;
             if ($currentIsMain) {
                 $user->addresses()->update(['is_main' => false]);
@@ -38,7 +39,7 @@ class AddressController extends Controller
 
             return $user->addresses()->create([
                 'id' => (string) Str::uuid(),
-                'address_details' => $validated['address_details'],
+                'address_details' => $cleanAddress,
                 'is_main' => $currentIsMain,
             ]);
         });
@@ -60,13 +61,14 @@ class AddressController extends Controller
         ]);
 
         $isMain = $validated['is_main'] ?? false;
+        $cleanAddress = strip_tags($validated['address_details']);
 
-        DB::transaction(function () use ($user, $address, $validated, $isMain) {
+        DB::transaction(function () use ($user, $address, $cleanAddress, $isMain) {
             if ($isMain) {
                 $user->addresses()->where('id', '!=', $address->id)->update(['is_main' => false]);
             }
             $address->update([
-                'address_details' => $validated['address_details'],
+                'address_details' => $cleanAddress,
                 'is_main' => $isMain,
             ]);
         });

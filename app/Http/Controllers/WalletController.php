@@ -42,7 +42,7 @@ class WalletController extends Controller
     public function topup(Request $request)
     {
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|integer|min:1|max:10000000',
         ]);
 
         $user = auth()->user();

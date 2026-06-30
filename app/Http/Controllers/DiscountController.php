@@ -21,7 +21,16 @@ class DiscountController extends Controller
         $request->validate([
             'code' => 'required|string|unique:discounts,code|max:50',
             'amount_type' => 'required|in:FIXED,PERCENTAGE',
-            'value' => 'required|numeric|min:0',
+            'value' => [
+                'required',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('amount_type') === 'PERCENTAGE' && $value > 100) {
+                        $fail('Nilai diskon persentase tidak boleh lebih dari 100%.');
+                    }
+                },
+            ],
             'max_usage' => 'required|integer|min:1',
             'expiry_date' => 'required|date|after:now',
         ]);
@@ -56,7 +65,16 @@ class DiscountController extends Controller
         $request->validate([
             'code' => 'required|string|unique:discounts,code|max:50',
             'amount_type' => 'required|in:FIXED,PERCENTAGE',
-            'value' => 'required|numeric|min:0',
+            'value' => [
+                'required',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('amount_type') === 'PERCENTAGE' && $value > 100) {
+                        $fail('Nilai diskon persentase tidak boleh lebih dari 100%.');
+                    }
+                },
+            ],
             'expiry_date' => 'required|date|after:now',
         ]);
 
