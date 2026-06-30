@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuyerWallet;
+use App\Models\Discount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Product;
-use App\Models\BuyerWallet;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -26,7 +27,7 @@ class OrderController extends Controller
         $user = auth()->user();
         $cart = $user->cart;
 
-        if (!$cart || $cart->items()->count() === 0) {
+        if (! $cart || $cart->items()->count() === 0) {
             return response()->json(['message' => 'Keranjang belanja kosong.'], 400);
         }
 
@@ -38,7 +39,7 @@ class OrderController extends Controller
         $deliveryFees = [
             'Regular' => 9000,
             'Next Day' => 15000,
-            'Instant' => 30000
+            'Instant' => 30000,
         ];
         $deliveryFee = $deliveryFees[$deliveryMethod];
 
@@ -56,9 +57,9 @@ class OrderController extends Controller
 
         if ($discountCode) {
             $code = strtoupper(trim($discountCode));
-            $discount = \App\Models\Discount::where('code', $code)->first();
+            $discount = Discount::where('code', $code)->first();
 
-            if (!$discount) {
+            if (! $discount) {
                 return response()->json(['message' => 'Kode diskon tidak ditemukan.'], 422);
             }
 
@@ -95,7 +96,7 @@ class OrderController extends Controller
         $wallet = $user->wallet ?: BuyerWallet::create([
             'id' => (string) Str::uuid(),
             'user_id' => $user->id,
-            'balance' => 0
+            'balance' => 0,
         ]);
 
         if ($wallet->balance < $totalPrice) {
@@ -226,7 +227,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Pesanan berhasil diproses dan siap dikirim.',
-            'order' => $this->formatOrder($order)
+            'order' => $this->formatOrder($order),
         ]);
     }
 
@@ -238,7 +239,7 @@ class OrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json($orders->map(fn($o) => $this->formatOrder($o)));
+        return response()->json($orders->map(fn ($o) => $this->formatOrder($o)));
     }
 
     public function sellerOrders()
@@ -246,7 +247,7 @@ class OrderController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json([]);
         }
 
@@ -255,7 +256,7 @@ class OrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json($orders->map(fn($o) => $this->formatOrder($o)));
+        return response()->json($orders->map(fn ($o) => $this->formatOrder($o)));
     }
 
     public function show($id)
@@ -269,7 +270,7 @@ class OrderController extends Controller
         $isDriver = $order->driver_id === $user->id;
         $isAdmin = $user->roles()->where('role', 'Admin')->exists();
 
-        if (!$isBuyer && !$isSeller && !$isDriver && !$isAdmin) {
+        if (! $isBuyer && ! $isSeller && ! $isDriver && ! $isAdmin) {
             return response()->json(['message' => 'Forbidden: Anda tidak memiliki akses ke pesanan ini.'], 403);
         }
 
@@ -313,7 +314,7 @@ class OrderController extends Controller
             $isValid = true;
         }
 
-        if (!$isValid) {
+        if (! $isValid) {
             return response()->json(['message' => 'Transisi status tidak valid untuk peran Anda.'], 400);
         }
 
@@ -364,6 +365,7 @@ class OrderController extends Controller
             })->toArray(),
             'items' => $order->items->map(function ($item) {
                 $prod = $item->product;
+
                 return [
                     'id' => $item->product_id,
                     'name' => $prod?->name ?? 'Produk Terhapus',

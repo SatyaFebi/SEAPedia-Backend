@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ReviewController;
-use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\StoreController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\OrderController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\WalletController;
+use Illuminate\Support\Facades\Route;
 
 // Public Guest Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -84,5 +84,15 @@ Route::middleware('auth.token')->group(function () {
         Route::get('/orders/seller', [OrderController::class, 'sellerOrders']);
         Route::post('/orders/{id}/process', [OrderController::class, 'processOrder']);
         Route::get('/reports/seller', [ReportController::class, 'sellerReport']);
+    });
+
+    // Driver Specific Routes
+    Route::middleware('role:Driver')->group(function () {
+        Route::get('/driver/jobs', [DeliveryController::class, 'availableJobs']);
+        Route::get('/driver/jobs/{orderId}', [DeliveryController::class, 'show']);
+        Route::post('/driver/jobs/{orderId}/take', [DeliveryController::class, 'takeJob']);
+        Route::post('/driver/jobs/{orderId}/complete', [DeliveryController::class, 'completeJob']);
+        Route::get('/driver/my-jobs', [DeliveryController::class, 'myJobs']);
+        Route::get('/driver/earnings', [DeliveryController::class, 'earnings']);
     });
 });

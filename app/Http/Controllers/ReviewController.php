@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ApplicationReview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ReviewController extends Controller
 {
@@ -21,7 +22,7 @@ class ReviewController extends Controller
             $role = 'Guest';
             if ($review->user) {
                 $userRoles = $review->user->roles()->pluck('role')->toArray();
-                if (!empty($userRoles)) {
+                if (! empty($userRoles)) {
                     // Pick the first role or active role if we had it, let's use the first one or just default to Buyer/Seller/Driver
                     $role = implode(', ', $userRoles);
                 }
@@ -58,7 +59,7 @@ class ReviewController extends Controller
         }
 
         $review = ApplicationReview::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'user_id' => $userId,
             'reviewer_name' => $validated['reviewer_name'],
             'rating' => $validated['rating'],
@@ -68,7 +69,7 @@ class ReviewController extends Controller
         $role = 'Guest';
         if ($user) {
             $userRoles = $user->roles()->pluck('role')->toArray();
-            if (!empty($userRoles)) {
+            if (! empty($userRoles)) {
                 $role = implode(', ', $userRoles);
             }
         }

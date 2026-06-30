@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_status_histories', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary()->default(DB::connection()->getDriverName() === 'pgsql' ? DB::raw('gen_random_uuid()') : null);
             $table->foreignUuid('order_id')->constrained('orders')->cascadeOnDelete();
             $table->string('status');
             $table->string('changed_by_role'); // Role apa yang ubah? ex : 'Buyer', 'Seller', 'Driver'

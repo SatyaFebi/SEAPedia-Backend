@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -53,5 +54,10 @@ class Order extends Model
     public function discount()
     {
         return $this->belongsTo(Discount::class, 'discount_id');
+    }
+
+    public function deliveryJob()
+    {
+        return $this->hasOne(DeliveryJob::class, 'order_id');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuyerWallet;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Http\Request;
@@ -49,10 +50,10 @@ class AuthController extends Controller
         $walletBalance = 0;
         $address = null;
         if (in_array('Buyer', $rolesList)) {
-            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+            $wallet = $user->wallet ?: BuyerWallet::create([
+                'id' => (string) Str::uuid(),
                 'user_id' => $user->id,
-                'balance' => 0
+                'balance' => 0,
             ]);
             $walletBalance = (float) $wallet->balance;
             $mainAddress = $user->addresses()->where('is_main', true)->first();
@@ -75,8 +76,8 @@ class AuthController extends Controller
                 'store' => $store ? [
                     'id' => $store->id,
                     'name' => $store->store_name,
-                ] : null
-            ]
+                ] : null,
+            ],
         ], 201);
     }
 
@@ -97,9 +98,9 @@ class AuthController extends Controller
             ->orWhere('email', $username)
             ->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json([
-                'message' => 'Kombinasi username/password salah.'
+                'message' => 'Kombinasi username/password salah.',
             ], 401);
         }
 
@@ -113,10 +114,10 @@ class AuthController extends Controller
         $walletBalance = 0;
         $address = null;
         if (in_array('Buyer', $rolesList)) {
-            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+            $wallet = $user->wallet ?: BuyerWallet::create([
+                'id' => (string) Str::uuid(),
                 'user_id' => $user->id,
-                'balance' => 0
+                'balance' => 0,
             ]);
             $walletBalance = (float) $wallet->balance;
             $mainAddress = $user->addresses()->where('is_main', true)->first();
@@ -139,8 +140,8 @@ class AuthController extends Controller
                 'store' => $store ? [
                     'id' => $store->id,
                     'name' => $store->store_name,
-                ] : null
-            ]
+                ] : null,
+            ],
         ]);
     }
 
@@ -151,7 +152,7 @@ class AuthController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -161,10 +162,10 @@ class AuthController extends Controller
         $walletBalance = 0;
         $address = null;
         if (in_array('Buyer', $rolesList)) {
-            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+            $wallet = $user->wallet ?: BuyerWallet::create([
+                'id' => (string) Str::uuid(),
                 'user_id' => $user->id,
-                'balance' => 0
+                'balance' => 0,
             ]);
             $walletBalance = (float) $wallet->balance;
             $mainAddress = $user->addresses()->where('is_main', true)->first();
@@ -185,8 +186,8 @@ class AuthController extends Controller
                 'store' => $store ? [
                     'id' => $store->id,
                     'name' => $store->store_name,
-                ] : null
-            ]
+                ] : null,
+            ],
         ]);
     }
 
@@ -203,7 +204,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'message' => 'Logged out successfully.'
+            'message' => 'Logged out successfully.',
         ]);
     }
 }

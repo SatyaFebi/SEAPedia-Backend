@@ -17,7 +17,7 @@ class StoreController extends Controller
 
         // Verify the user has the Seller role
         $isSeller = $user->roles()->where('role', 'Seller')->exists();
-        if (!$isSeller) {
+        if (! $isSeller) {
             return response()->json(['message' => 'Forbidden: Only sellers can manage stores.'], 403);
         }
 
@@ -32,7 +32,7 @@ class StoreController extends Controller
 
         // Verify uniqueness
         $existingStore = Store::where('store_name', $storeName)->first();
-        if ($existingStore && (!$store || $existingStore->id !== $store->id)) {
+        if ($existingStore && (! $store || $existingStore->id !== $store->id)) {
             return response()->json(['message' => 'Nama toko sudah digunakan.'], 422);
         }
 
@@ -52,7 +52,7 @@ class StoreController extends Controller
             'store' => [
                 'id' => $store->id,
                 'name' => $store->store_name,
-            ]
+            ],
         ]);
     }
 
@@ -64,7 +64,7 @@ class StoreController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json(['message' => 'No store found.'], 404);
         }
 
@@ -80,7 +80,7 @@ class StoreController extends Controller
     public function show(string $id)
     {
         $store = Store::find($id);
-        if (!$store) {
+        if (! $store) {
             return response()->json(['message' => 'Store not found.'], 404);
         }
 

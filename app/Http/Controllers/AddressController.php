@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BuyerAddress;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AddressController extends Controller
 {
@@ -13,6 +12,7 @@ class AddressController extends Controller
     {
         $user = auth()->user();
         $addresses = $user->addresses()->orderBy('is_main', 'desc')->orderBy('created_at', 'desc')->get();
+
         return response()->json($addresses);
     }
 
@@ -45,7 +45,7 @@ class AddressController extends Controller
 
         return response()->json([
             'message' => 'Alamat berhasil ditambahkan.',
-            'address' => $address
+            'address' => $address,
         ], 201);
     }
 
@@ -73,7 +73,7 @@ class AddressController extends Controller
 
         return response()->json([
             'message' => 'Alamat berhasil diperbarui.',
-            'address' => $address
+            'address' => $address,
         ]);
     }
 
@@ -94,7 +94,7 @@ class AddressController extends Controller
         });
 
         return response()->json([
-            'message' => 'Alamat berhasil dihapus.'
+            'message' => 'Alamat berhasil dihapus.',
         ]);
     }
 }

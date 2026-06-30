@@ -12,7 +12,7 @@ class RequireAuth
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!auth()->user()) {
+        if (! auth()->user()) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 

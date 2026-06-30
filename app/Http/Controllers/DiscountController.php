@@ -14,7 +14,7 @@ class DiscountController extends Controller
     public function createVoucher(Request $request)
     {
         $user = auth()->user();
-        if (!$user || !$user->roles()->where('role', 'Admin')->exists()) {
+        if (! $user || ! $user->roles()->where('role', 'Admin')->exists()) {
             return response()->json(['message' => 'Forbidden: Only admins can manage discounts.'], 403);
         }
 
@@ -39,7 +39,7 @@ class DiscountController extends Controller
 
         return response()->json([
             'message' => 'Voucher created successfully.',
-            'discount' => $voucher
+            'discount' => $voucher,
         ], 201);
     }
 
@@ -49,7 +49,7 @@ class DiscountController extends Controller
     public function createPromo(Request $request)
     {
         $user = auth()->user();
-        if (!$user || !$user->roles()->where('role', 'Admin')->exists()) {
+        if (! $user || ! $user->roles()->where('role', 'Admin')->exists()) {
             return response()->json(['message' => 'Forbidden: Only admins can manage discounts.'], 403);
         }
 
@@ -73,7 +73,7 @@ class DiscountController extends Controller
 
         return response()->json([
             'message' => 'Promo created successfully.',
-            'discount' => $promo
+            'discount' => $promo,
         ], 201);
     }
 
@@ -83,6 +83,7 @@ class DiscountController extends Controller
     public function listVouchers()
     {
         $vouchers = Discount::where('type', 'VOUCHER')->get();
+
         return response()->json($vouchers);
     }
 
@@ -92,6 +93,7 @@ class DiscountController extends Controller
     public function listPromos()
     {
         $promos = Discount::where('type', 'PROMO')->get();
+
         return response()->json($promos);
     }
 
@@ -104,7 +106,7 @@ class DiscountController extends Controller
             ->where('code', strtoupper($code))
             ->first();
 
-        if (!$voucher) {
+        if (! $voucher) {
             return response()->json(['message' => 'Voucher not found.'], 404);
         }
 
@@ -120,7 +122,7 @@ class DiscountController extends Controller
             ->where('code', strtoupper($code))
             ->first();
 
-        if (!$promo) {
+        if (! $promo) {
             return response()->json(['message' => 'Promo not found.'], 404);
         }
 
@@ -134,7 +136,7 @@ class DiscountController extends Controller
     {
         $request->validate([
             'code' => 'required|string',
-            'subtotal' => 'required|numeric'
+            'subtotal' => 'required|numeric',
         ]);
 
         $code = strtoupper($request->input('code'));
@@ -142,7 +144,7 @@ class DiscountController extends Controller
 
         $discount = Discount::where('code', $code)->first();
 
-        if (!$discount) {
+        if (! $discount) {
             return response()->json(['message' => 'Kode diskon tidak ditemukan.'], 404);
         }
 

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('wallet_transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary()->default(DB::connection()->getDriverName() === 'pgsql' ? DB::raw('gen_random_uuid()') : null);
             $table->foreignUuid('wallet_id')->constrained('buyer_wallets')->cascadeOnDelete();
             $table->decimal('amount', 15, 2);
             $table->string('type'); // 'TOPUP', 'PAYMENT', 'REFUND'

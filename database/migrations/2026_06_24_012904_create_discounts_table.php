@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('discounts', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary()->default(DB::connection()->getDriverName() === 'pgsql' ? DB::raw('gen_random_uuid()') : null);
             $table->string('code')->unique();
             $table->string('type'); // 'VOUCHER' or 'PROMO'
             $table->string('amount_type'); // 'FIXED' or 'PERCENTAGE'

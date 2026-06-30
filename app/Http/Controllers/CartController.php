@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
@@ -16,12 +15,12 @@ class CartController extends Controller
         $user = auth()->user();
         $cart = $user->cart;
 
-        if (!$cart) {
+        if (! $cart) {
             return response()->json([
                 'store_id' => null,
                 'store_name' => null,
                 'items' => [],
-                'subtotal' => 0
+                'subtotal' => 0,
             ]);
         }
 
@@ -29,6 +28,7 @@ class CartController extends Controller
 
         $formattedItems = $items->map(function ($item) {
             $prod = $item->product;
+
             return [
                 'id' => $item->id,
                 'product' => [
@@ -51,7 +51,7 @@ class CartController extends Controller
             'store_id' => $cart->store_id,
             'store_name' => $cart->store?->store_name ?? 'Toko Tidak Dikenal',
             'items' => $formattedItems,
-            'subtotal' => $subtotal
+            'subtotal' => $subtotal,
         ]);
     }
 
@@ -91,7 +91,7 @@ class CartController extends Controller
                 $cart = Cart::create([
                     'id' => (string) Str::uuid(),
                     'user_id' => $user->id,
-                    'store_id' => $product->store_id
+                    'store_id' => $product->store_id,
                 ]);
             }
 
@@ -115,9 +115,9 @@ class CartController extends Controller
 
         if (isset($result['conflict']) && $result['conflict']) {
             return response()->json([
-                'message' => 'Keranjang Anda berisi produk dari toko ' . $result['current_store'] . '. Hapus keranjang dan tambahkan produk baru?',
+                'message' => 'Keranjang Anda berisi produk dari toko '.$result['current_store'].'. Hapus keranjang dan tambahkan produk baru?',
                 'conflict' => true,
-                'current_store' => $result['current_store']
+                'current_store' => $result['current_store'],
             ], 409);
         }
 
@@ -132,7 +132,7 @@ class CartController extends Controller
 
         $user = auth()->user();
         $cart = $user->cart;
-        if (!$cart) {
+        if (! $cart) {
             return response()->json(['message' => 'Keranjang tidak ditemukan.'], 404);
         }
 
@@ -144,6 +144,7 @@ class CartController extends Controller
             if ($cart->items()->count() === 0) {
                 $cart->delete();
             }
+
             return response()->json(['message' => 'Produk berhasil dihapus dari keranjang.']);
         }
 
@@ -152,6 +153,7 @@ class CartController extends Controller
         }
 
         $item->update(['quantity' => $quantity]);
+
         return response()->json(['message' => 'Jumlah produk berhasil diperbarui.']);
     }
 
@@ -159,7 +161,7 @@ class CartController extends Controller
     {
         $user = auth()->user();
         $cart = $user->cart;
-        if (!$cart) {
+        if (! $cart) {
             return response()->json(['message' => 'Keranjang tidak ditemukan.'], 404);
         }
 
@@ -181,6 +183,7 @@ class CartController extends Controller
             $cart->items()->delete();
             $cart->delete();
         }
+
         return response()->json(['message' => 'Keranjang berhasil dikosongkan.']);
     }
 }

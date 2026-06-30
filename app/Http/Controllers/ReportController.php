@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
@@ -13,7 +12,7 @@ class ReportController extends Controller
     public function buyerReport()
     {
         $user = auth()->user();
-        
+
         $orders = Order::where('buyer_id', $user->id)
             ->with(['store', 'items.product', 'statusHistory', 'discount'])
             ->orderBy('created_at', 'desc')
@@ -22,7 +21,7 @@ class ReportController extends Controller
         $totalSpending = 0;
         $totalOrders = $orders->count();
         $completedOrdersCount = 0;
-        
+
         foreach ($orders as $order) {
             $totalSpending += (float) $order->total_price;
             if ($order->status === 'Pesanan Selesai') {
@@ -66,7 +65,7 @@ class ReportController extends Controller
                 'total_orders' => $totalOrders,
                 'completed_orders' => $completedOrdersCount,
             ],
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 
@@ -78,7 +77,7 @@ class ReportController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json([
                 'summary' => [
                     'total_income' => 0,
@@ -86,7 +85,7 @@ class ReportController extends Controller
                     'processed_orders' => 0,
                     'incoming_orders' => 0,
                 ],
-                'orders' => []
+                'orders' => [],
             ]);
         }
 
@@ -104,7 +103,7 @@ class ReportController extends Controller
             if ($order->status !== 'Dikembalikan') {
                 $totalIncome += (float) ($order->subtotal - $order->discount_amount);
             }
-            
+
             if ($order->status === 'Sedang Dikemas') {
                 $incomingCount++;
             } else {
@@ -149,7 +148,7 @@ class ReportController extends Controller
                 'processed_orders' => $processedCount,
                 'incoming_orders' => $incomingCount,
             ],
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 }

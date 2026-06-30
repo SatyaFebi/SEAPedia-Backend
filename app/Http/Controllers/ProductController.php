@@ -46,7 +46,7 @@ class ProductController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json(['message' => 'Anda harus membuat toko terlebih dahulu sebelum menambahkan produk.'], 400);
         }
 
@@ -82,7 +82,7 @@ class ProductController extends Controller
                 'stock' => (int) $product->stock,
                 'image' => $product->image,
                 'category' => $product->category,
-            ]
+            ],
         ], 201);
     }
 
@@ -93,7 +93,7 @@ class ProductController extends Controller
     {
         $product = Product::with('store')->find($id);
 
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Produk tidak ditemukan.'], 404);
         }
 
@@ -118,12 +118,12 @@ class ProductController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json(['message' => 'Toko tidak ditemukan.'], 400);
         }
 
         $product = Product::find($id);
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Produk tidak ditemukan.'], 404);
         }
 
@@ -162,7 +162,7 @@ class ProductController extends Controller
                 'stock' => (int) $product->stock,
                 'image' => $product->image,
                 'category' => $product->category,
-            ]
+            ],
         ]);
     }
 
@@ -174,12 +174,12 @@ class ProductController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        if (!$store) {
+        if (! $store) {
             return response()->json(['message' => 'Toko tidak ditemukan.'], 400);
         }
 
         $product = Product::find($id);
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Produk tidak ditemukan.'], 404);
         }
 
@@ -191,7 +191,7 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json([
-            'message' => 'Produk berhasil dihapus.'
+            'message' => 'Produk berhasil dihapus.',
         ]);
     }
 }

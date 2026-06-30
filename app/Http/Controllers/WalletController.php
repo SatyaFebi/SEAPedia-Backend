@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\BuyerWallet;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class WalletController extends Controller
 {
@@ -15,11 +15,11 @@ class WalletController extends Controller
         $user = auth()->user();
         $wallet = $user->wallet;
 
-        if (!$wallet) {
+        if (! $wallet) {
             $wallet = BuyerWallet::create([
                 'id' => (string) Str::uuid(),
                 'user_id' => $user->id,
-                'balance' => 0
+                'balance' => 0,
             ]);
         }
 
@@ -35,7 +35,7 @@ class WalletController extends Controller
                     'description' => $tx->description,
                     'created_at' => $tx->created_at->toDateTimeString(),
                 ];
-            })
+            }),
         ]);
     }
 
@@ -50,11 +50,11 @@ class WalletController extends Controller
 
         $result = DB::transaction(function () use ($user, $amount) {
             $wallet = $user->wallet;
-            if (!$wallet) {
+            if (! $wallet) {
                 $wallet = BuyerWallet::create([
                     'id' => (string) Str::uuid(),
                     'user_id' => $user->id,
-                    'balance' => 0
+                    'balance' => 0,
                 ]);
             }
 
@@ -74,7 +74,7 @@ class WalletController extends Controller
 
         return response()->json([
             'message' => 'Top up berhasil.',
-            'balance' => (float) $result->balance
+            'balance' => (float) $result->balance,
         ]);
     }
 }

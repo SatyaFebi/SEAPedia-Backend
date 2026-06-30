@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class BuyerAddress extends Model
 {
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [

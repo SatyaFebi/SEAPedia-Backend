@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Discount;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,7 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         // 1. Seed Budi (Buyer, Seller)
         $budi = User::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Budi Santoso',
             'username' => 'budi',
             'email' => 'budi@seapedia.test',
@@ -27,7 +29,7 @@ class DatabaseSeeder extends Seeder
 
         // 2. Seed Agus (Buyer, Seller, Driver)
         $agus = User::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Agus Setiawan',
             'username' => 'agus',
             'email' => 'agus@seapedia.test',
@@ -39,7 +41,7 @@ class DatabaseSeeder extends Seeder
 
         // 3. Seed Siti (Buyer, Driver)
         $siti = User::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Siti Rahma',
             'username' => 'siti',
             'email' => 'siti@seapedia.test',
@@ -50,7 +52,7 @@ class DatabaseSeeder extends Seeder
 
         // 4. Seed Admin (Admin)
         $admin = User::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Super Admin',
             'username' => 'admin',
             'email' => 'admin@seapedia.test',
@@ -59,8 +61,8 @@ class DatabaseSeeder extends Seeder
         UserRole::create(['user_id' => $admin->id, 'role' => 'Admin']);
 
         // 5. Seed Vouchers & Promos
-        \App\Models\Discount::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+        Discount::create([
+            'id' => (string) Str::uuid(),
             'code' => 'SEAPEDIA10',
             'type' => 'VOUCHER',
             'amount_type' => 'PERCENTAGE',
@@ -70,8 +72,8 @@ class DatabaseSeeder extends Seeder
             'expiry_date' => '2030-01-01 00:00:00',
         ]);
 
-        \App\Models\Discount::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+        Discount::create([
+            'id' => (string) Str::uuid(),
             'code' => 'HEMAT50',
             'type' => 'VOUCHER',
             'amount_type' => 'FIXED',
@@ -81,8 +83,8 @@ class DatabaseSeeder extends Seeder
             'expiry_date' => '2030-01-01 00:00:00',
         ]);
 
-        \App\Models\Discount::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+        Discount::create([
+            'id' => (string) Str::uuid(),
             'code' => 'PROMO20',
             'type' => 'PROMO',
             'amount_type' => 'PERCENTAGE',
@@ -92,8 +94,8 @@ class DatabaseSeeder extends Seeder
             'expiry_date' => '2030-01-01 00:00:00',
         ]);
 
-        \App\Models\Discount::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+        Discount::create([
+            'id' => (string) Str::uuid(),
             'code' => 'EXPIRED10',
             'type' => 'PROMO',
             'amount_type' => 'PERCENTAGE',

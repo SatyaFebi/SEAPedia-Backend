@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateToken;
+use App\Http\Middleware\RequireActiveRole;
+use App\Http\Middleware\RequireAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,10 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(\App\Http\Middleware\AuthenticateToken::class);
+        $middleware->append(AuthenticateToken::class);
         $middleware->alias([
-            'auth.token' => \App\Http\Middleware\RequireAuth::class,
-            'role' => \App\Http\Middleware\RequireActiveRole::class,
+            'auth.token' => RequireAuth::class,
+            'role' => RequireActiveRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
