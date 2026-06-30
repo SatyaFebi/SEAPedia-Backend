@@ -49,4 +49,9 @@ class Order extends Model
     {
         return $this->hasMany(OrderStatusHistory::class, 'order_id');
     }
+
+    public function discount()
+    {
+        return $this->belongsTo(Discount::class, 'discount_id');
+    }
 }

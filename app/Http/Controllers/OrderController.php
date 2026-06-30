@@ -20,6 +20,7 @@ class OrderController extends Controller
             'delivery_method' => 'required|string|in:Instant,Next Day,Regular',
             'shipping_address' => 'required|string|max:1000',
             'voucher_code' => 'nullable|string',
+            'discount_code' => 'nullable|string',
         ]);
 
         $user = auth()->user();
@@ -31,7 +32,7 @@ class OrderController extends Controller
 
         $deliveryMethod = $validated['delivery_method'];
         $shippingAddress = $validated['shipping_address'];
-        $voucherCode = $request->input('voucher_code');
+        $discountCode = $request->input('discount_code') ?: $request->input('voucher_code');
 
         // Delivery Fee calculation
         $deliveryFees = [
@@ -49,32 +50,46 @@ class OrderController extends Controller
             $subtotal += $item->product->price * $item->quantity;
         }
 
-        // Apply voucher discount
+        // Apply discount from DB
+        $discount = null;
         $discountAmount = 0;
-        $deliveryFeeDiscount = 0;
 
-        if ($voucherCode) {
-            $code = strtoupper(trim($voucherCode));
-            if ($code === 'SEAPEDIA10') {
-                if ($subtotal >= 50000) {
-                    $discountAmount = min($subtotal * 0.10, 50000);
+        if ($discountCode) {
+            $code = strtoupper(trim($discountCode));
+            $discount = \App\Models\Discount::where('code', $code)->first();
+
+            if (!$discount) {
+                return response()->json(['message' => 'Kode diskon tidak ditemukan.'], 422);
+            }
+
+            // Check expiry
+            if ($discount->expiry_date && $discount->expiry_date->isPast()) {
+                return response()->json(['message' => 'Kode diskon sudah kedaluwarsa.'], 422);
+            }
+
+            // Check usage limit for Voucher
+            if ($discount->type === 'VOUCHER' && $discount->max_usage !== null) {
+                if ($discount->used_count >= $discount->max_usage) {
+                    return response()->json(['message' => 'Voucher sudah habis digunakan.'], 422);
                 }
-            } elseif ($code === 'HEMAT25') {
-                if ($subtotal >= 100000) {
-                    $discountAmount = min($subtotal * 0.25, 30000);
-                }
-            } elseif ($code === 'GRATISONGKIR') {
-                if ($subtotal >= 75000) {
-                    $deliveryFeeDiscount = min(15000, $deliveryFee);
-                }
+            }
+
+            // Calculate discount amount
+            if ($discount->amount_type === 'PERCENTAGE') {
+                $discountAmount = $subtotal * ($discount->value / 100);
+            } else {
+                $discountAmount = $discount->value;
+            }
+
+            // Discount cannot exceed subtotal
+            if ($discountAmount > $subtotal) {
+                $discountAmount = $subtotal;
             }
         }
 
-        $finalDeliveryFee = $deliveryFee - $deliveryFeeDiscount;
         $discountedSubtotal = $subtotal - $discountAmount;
-        $ppnBase = max(0, $discountedSubtotal) + $finalDeliveryFee;
-        $taxAmount = round($ppnBase * 0.12);
-        $totalPrice = max(0, $discountedSubtotal) + $finalDeliveryFee + $taxAmount;
+        $taxAmount = round(max(0, $discountedSubtotal) * 0.12);
+        $totalPrice = max(0, $discountedSubtotal) + $deliveryFee + $taxAmount;
 
         // Perform validations
         $wallet = $user->wallet ?: BuyerWallet::create([
@@ -98,7 +113,7 @@ class OrderController extends Controller
         try {
             $order = DB::transaction(function () use (
                 $user, $cart, $cartItems, $totalPrice, $wallet,
-                $subtotal, $discountAmount, $deliveryFeeDiscount, $deliveryFee, $taxAmount,
+                $subtotal, $discountAmount, $discount, $deliveryFee, $taxAmount,
                 $deliveryMethod, $shippingAddress
             ) {
                 // Deduct wallet
@@ -132,15 +147,21 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'buyer_id' => $user->id,
                     'store_id' => $cart->store_id,
+                    'discount_id' => $discount ? $discount->id : null,
                     'delivery_method' => $deliveryMethod,
                     'status' => 'Sedang Dikemas',
                     'subtotal' => $subtotal,
-                    'discount_amount' => $discountAmount + $deliveryFeeDiscount,
+                    'discount_amount' => $discountAmount,
                     'delivery_fee' => $deliveryFee,
                     'tax_amount' => $taxAmount,
                     'total_price' => $totalPrice,
                     'shipping_address' => $shippingAddress,
                 ]);
+
+                // Increment used count if voucher/promo
+                if ($discount) {
+                    $discount->increment('used_count');
+                }
 
                 // Create Order Items
                 foreach ($cartItems as $item) {
@@ -178,11 +199,42 @@ class OrderController extends Controller
         }
     }
 
+    public function processOrder(Request $request, $id)
+    {
+        $user = auth()->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->store?->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden: Hanya penjual yang memiliki pesanan ini yang dapat memprosesnya.'], 403);
+        }
+
+        if ($order->status !== 'Sedang Dikemas') {
+            return response()->json(['message' => 'Hanya pesanan dengan status "Sedang Dikemas" yang dapat diproses.'], 400);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->status = 'Menunggu Pengirim';
+            $order->save();
+
+            OrderStatusHistory::create([
+                'id' => (string) Str::uuid(),
+                'order_id' => $order->id,
+                'status' => 'Menunggu Pengirim',
+                'changed_by_role' => 'Seller',
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Pesanan berhasil diproses dan siap dikirim.',
+            'order' => $this->formatOrder($order)
+        ]);
+    }
+
     public function buyerOrders()
     {
         $user = auth()->user();
         $orders = Order::where('buyer_id', $user->id)
-            ->with(['store', 'items.product', 'statusHistory'])
+            ->with(['store', 'items.product', 'statusHistory', 'discount'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -199,7 +251,7 @@ class OrderController extends Controller
         }
 
         $orders = Order::where('store_id', $store->id)
-            ->with(['buyer', 'items.product', 'statusHistory'])
+            ->with(['buyer', 'items.product', 'statusHistory', 'discount'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -209,7 +261,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $user = auth()->user();
-        $order = Order::with(['buyer', 'store', 'items.product', 'statusHistory'])->findOrFail($id);
+        $order = Order::with(['buyer', 'store', 'items.product', 'statusHistory', 'discount'])->findOrFail($id);
 
         // Authorization check: User must be buyer, seller/owner of the store, driver (if assigned), or Admin
         $isBuyer = $order->buyer_id === $user->id;
@@ -234,7 +286,7 @@ class OrderController extends Controller
         $user = auth()->user();
         $activeRole = $request->header('X-Active-Role') ?: ($user->roles()->first()?->role);
 
-        $order = Order::findOrFail($id);
+        $order = Order::with('discount')->findOrFail($id);
         $currentStatus = $order->status;
         $isValid = false;
 
@@ -296,6 +348,8 @@ class OrderController extends Controller
             'status' => $order->status,
             'subtotal' => (float) $order->subtotal,
             'discount_amount' => (float) $order->discount_amount,
+            'discount_code' => $order->discount?->code,
+            'discount_type' => $order->discount?->type,
             'delivery_fee' => (float) $order->delivery_fee,
             'tax_amount' => (float) $order->tax_amount,
             'total' => (float) $order->total_price,

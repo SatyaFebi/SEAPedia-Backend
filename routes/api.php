@@ -10,6 +10,8 @@ use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\ReportController;
 
 // Public Guest Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -30,6 +32,19 @@ Route::middleware('auth.token')->group(function () {
     // Order detail route accessible by authorized parties
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
+    // Vouchers & Promos (General authenticated endpoints)
+    Route::get('/vouchers', [DiscountController::class, 'listVouchers']);
+    Route::get('/promos', [DiscountController::class, 'listPromos']);
+    Route::get('/vouchers/{code}', [DiscountController::class, 'showVoucher']);
+    Route::get('/promos/{code}', [DiscountController::class, 'showPromo']);
+    Route::post('/discounts/validate', [DiscountController::class, 'validateCode']);
+
+    // Admin Specific Routes (can be accessed by admin role)
+    Route::middleware('role:Admin')->group(function () {
+        Route::post('/admin/vouchers', [DiscountController::class, 'createVoucher']);
+        Route::post('/admin/promos', [DiscountController::class, 'createPromo']);
+    });
 
     // Buyer Specific Routes
     Route::middleware('role:Buyer')->group(function () {
@@ -53,6 +68,7 @@ Route::middleware('auth.token')->group(function () {
         // Checkout
         Route::post('/checkout', [OrderController::class, 'checkout']);
         Route::get('/orders/buyer', [OrderController::class, 'buyerOrders']);
+        Route::get('/reports/buyer', [ReportController::class, 'buyerReport']);
     });
 
     // Seller Specific Routes
@@ -66,5 +82,7 @@ Route::middleware('auth.token')->group(function () {
 
         // Incoming orders
         Route::get('/orders/seller', [OrderController::class, 'sellerOrders']);
+        Route::post('/orders/{id}/process', [OrderController::class, 'processOrder']);
+        Route::get('/reports/seller', [ReportController::class, 'sellerReport']);
     });
 });

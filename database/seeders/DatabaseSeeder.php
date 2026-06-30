@@ -57,5 +57,50 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password123'),
         ]);
         UserRole::create(['user_id' => $admin->id, 'role' => 'Admin']);
+
+        // 5. Seed Vouchers & Promos
+        \App\Models\Discount::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'code' => 'SEAPEDIA10',
+            'type' => 'VOUCHER',
+            'amount_type' => 'PERCENTAGE',
+            'value' => 10,
+            'max_usage' => 100,
+            'used_count' => 0,
+            'expiry_date' => '2030-01-01 00:00:00',
+        ]);
+
+        \App\Models\Discount::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'code' => 'HEMAT50',
+            'type' => 'VOUCHER',
+            'amount_type' => 'FIXED',
+            'value' => 50000,
+            'max_usage' => 5,
+            'used_count' => 0,
+            'expiry_date' => '2030-01-01 00:00:00',
+        ]);
+
+        \App\Models\Discount::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'code' => 'PROMO20',
+            'type' => 'PROMO',
+            'amount_type' => 'PERCENTAGE',
+            'value' => 20,
+            'max_usage' => null,
+            'used_count' => 0,
+            'expiry_date' => '2030-01-01 00:00:00',
+        ]);
+
+        \App\Models\Discount::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'code' => 'EXPIRED10',
+            'type' => 'PROMO',
+            'amount_type' => 'PERCENTAGE',
+            'value' => 10,
+            'max_usage' => null,
+            'used_count' => 0,
+            'expiry_date' => '2020-01-01 00:00:00',
+        ]);
     }
 }
