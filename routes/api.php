@@ -44,6 +44,12 @@ Route::middleware('auth.token')->group(function () {
     Route::middleware('role:Admin')->group(function () {
         Route::post('/admin/vouchers', [DiscountController::class, 'createVoucher']);
         Route::post('/admin/promos', [DiscountController::class, 'createPromo']);
+        
+        Route::get('/admin/dashboard', [ReportController::class, 'adminDashboard']);
+        Route::get('/admin/orders', [ReportController::class, 'adminOrders']);
+        Route::get('/admin/delivery-jobs', [ReportController::class, 'adminDeliveryJobs']);
+        Route::post('/admin/process-overdue', [OrderController::class, 'processOverdue']);
+        Route::post('/admin/simulate-next-day', [OrderController::class, 'simulateNextDay']);
     });
 
     // Buyer Specific Routes

@@ -376,4 +376,119 @@ class OrderController extends Controller
             })->toArray(),
         ];
     }
+
+    public function simulateNextDay(Request $request)
+    {
+        $offsetHours = \Illuminate\Support\Facades\Cache::get('simulated_offset_hours', 0);
+        $offsetHours += 24;
+        \Illuminate\Support\Facades\Cache::put('simulated_offset_hours', $offsetHours);
+
+        $processedCount = $this->runOverdueProcessing();
+
+        return response()->json([
+            'message' => 'Waktu sistem berhasil dimajukan 1 hari (24 jam).',
+            'simulated_offset_hours' => $offsetHours,
+            'overdue_processed_count' => $processedCount
+        ]);
+    }
+
+    public function processOverdue(Request $request)
+    {
+        $processedCount = $this->runOverdueProcessing();
+        return response()->json([
+            'message' => "Berhasil memproses $processedCount pesanan yang melewati batas SLA."
+        ]);
+    }
+
+    private function runOverdueProcessing()
+    {
+        $offsetHours = \Illuminate\Support\Facades\Cache::get('simulated_offset_hours', 0);
+        $simulatedNow = now()->addHours($offsetHours);
+
+        $activeOrders = Order::whereNotIn('status', ['Pesanan Selesai', 'Dikembalikan'])
+            ->whereNull('overdue_processed_at')
+            ->get();
+
+        $processedCount = 0;
+
+        foreach ($activeOrders as $order) {
+            $isOverdue = false;
+            $createdAt = clone $order->created_at;
+
+            if ($order->delivery_method === 'Instant') {
+                $deadline = clone $createdAt;
+                $deadline->addHours(3);
+                if ($simulatedNow->greaterThanOrEqualTo($deadline)) {
+                    $isOverdue = true;
+                }
+            } elseif ($order->delivery_method === 'Next Day') {
+                $cutOffTime = clone $createdAt;
+                $cutOffTime->setTime(13, 0, 0);
+                if ($createdAt->lessThan($cutOffTime)) {
+                    // deadline is next day at 23:59:59
+                    $deadline = clone $createdAt;
+                    $deadline->addDays(1)->endOfDay();
+                } else {
+                    // deadline is day+2 at 23:59:59
+                    $deadline = clone $createdAt;
+                    $deadline->addDays(2)->endOfDay();
+                }
+                
+                if ($simulatedNow->greaterThan($deadline)) {
+                    $isOverdue = true;
+                }
+            } elseif ($order->delivery_method === 'Regular') {
+                $deadline = clone $createdAt;
+                $deadline->addDays(5)->endOfDay();
+                if ($simulatedNow->greaterThan($deadline)) {
+                    $isOverdue = true;
+                }
+            }
+
+            if ($isOverdue) {
+                DB::transaction(function () use ($order, $simulatedNow) {
+                    // lock order
+                    $lockedOrder = Order::lockForUpdate()->find($order->id);
+                    if ($lockedOrder->overdue_processed_at) return;
+
+                    $lockedOrder->status = 'Dikembalikan';
+                    $lockedOrder->overdue_processed_at = $simulatedNow;
+                    $lockedOrder->save();
+
+                    // Restore Stock
+                    foreach ($lockedOrder->items as $item) {
+                        Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                    }
+
+                    // Refund buyer wallet
+                    $buyerWallet = BuyerWallet::firstOrCreate(
+                        ['user_id' => $lockedOrder->buyer_id],
+                        ['id' => (string) Str::uuid(), 'balance' => 0]
+                    );
+
+                    $buyerWallet->balance += $lockedOrder->total_price;
+                    $buyerWallet->save();
+
+                    WalletTransaction::create([
+                        'id' => (string) Str::uuid(),
+                        'wallet_id' => $buyerWallet->id,
+                        'amount' => $lockedOrder->total_price,
+                        'type' => 'REFUND',
+                        'description' => "Pengembalian Dana Pesanan #{$lockedOrder->id} (SLA Overdue)",
+                    ]);
+
+                    // Add Status History
+                    OrderStatusHistory::create([
+                        'id' => (string) Str::uuid(),
+                        'order_id' => $lockedOrder->id,
+                        'status' => 'Dikembalikan',
+                        'changed_by_role' => 'System',
+                    ]);
+                });
+                $processedCount++;
+            }
+        }
+
+        return $processedCount;
+    }
 }
