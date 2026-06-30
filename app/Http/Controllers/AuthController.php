@@ -44,6 +44,20 @@ class AuthController extends Controller
 
         // Return user profile and token
         $rolesList = $user->roles()->pluck('role')->toArray();
+        $store = $user->store;
+
+        $walletBalance = 0;
+        $address = null;
+        if (in_array('Buyer', $rolesList)) {
+            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'user_id' => $user->id,
+                'balance' => 0
+            ]);
+            $walletBalance = (float) $wallet->balance;
+            $mainAddress = $user->addresses()->where('is_main', true)->first();
+            $address = $mainAddress ? $mainAddress->address_details : 'Belum ada alamat pengiriman';
+        }
 
         return response()->json([
             'message' => 'Registration successful.',
@@ -54,9 +68,14 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'roles' => $rolesList,
-                'walletBalance' => 0, // Placeholder balance
+                'walletBalance' => $walletBalance,
+                'address' => $address,
                 'sellerIncome' => 0,  // Placeholder seller income
-                'driverEarnings' => 0 // Placeholder driver earnings
+                'driverEarnings' => 0, // Placeholder driver earnings
+                'store' => $store ? [
+                    'id' => $store->id,
+                    'name' => $store->store_name,
+                ] : null
             ]
         ], 201);
     }
@@ -89,6 +108,20 @@ class AuthController extends Controller
         $user->save();
 
         $rolesList = $user->roles()->pluck('role')->toArray();
+        $store = $user->store;
+
+        $walletBalance = 0;
+        $address = null;
+        if (in_array('Buyer', $rolesList)) {
+            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'user_id' => $user->id,
+                'balance' => 0
+            ]);
+            $walletBalance = (float) $wallet->balance;
+            $mainAddress = $user->addresses()->where('is_main', true)->first();
+            $address = $mainAddress ? $mainAddress->address_details : 'Belum ada alamat pengiriman';
+        }
 
         return response()->json([
             'message' => 'Login successful.',
@@ -99,9 +132,14 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'roles' => $rolesList,
-                'walletBalance' => $rolesList ? 1500000 : 0, // Mock starting balance for Budi/Agus/Siti if Buyer
+                'walletBalance' => $walletBalance,
+                'address' => $address,
                 'sellerIncome' => 0,
-                'driverEarnings' => 0
+                'driverEarnings' => 0,
+                'store' => $store ? [
+                    'id' => $store->id,
+                    'name' => $store->store_name,
+                ] : null
             ]
         ]);
     }
@@ -118,6 +156,20 @@ class AuthController extends Controller
         }
 
         $rolesList = $user->roles()->pluck('role')->toArray();
+        $store = $user->store;
+
+        $walletBalance = 0;
+        $address = null;
+        if (in_array('Buyer', $rolesList)) {
+            $wallet = $user->wallet ?: \App\Models\BuyerWallet::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'user_id' => $user->id,
+                'balance' => 0
+            ]);
+            $walletBalance = (float) $wallet->balance;
+            $mainAddress = $user->addresses()->where('is_main', true)->first();
+            $address = $mainAddress ? $mainAddress->address_details : 'Belum ada alamat pengiriman';
+        }
 
         return response()->json([
             'user' => [
@@ -126,9 +178,14 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'roles' => $rolesList,
-                'walletBalance' => in_array('Buyer', $rolesList) ? 1500000 : 0,
+                'walletBalance' => $walletBalance,
+                'address' => $address,
                 'sellerIncome' => 0,
-                'driverEarnings' => 0
+                'driverEarnings' => 0,
+                'store' => $store ? [
+                    'id' => $store->id,
+                    'name' => $store->store_name,
+                ] : null
             ]
         ]);
     }

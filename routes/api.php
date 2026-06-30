@@ -4,6 +4,13 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
+
 // Public Guest Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -11,8 +18,53 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::post('/reviews', [ReviewController::class, 'store']);
 
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/stores/{id}', [StoreController::class, 'show']);
+
 // Authenticated Routes
 Route::middleware('auth.token')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+
+    // Order detail route accessible by authorized parties
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
+    // Buyer Specific Routes
+    Route::middleware('role:Buyer')->group(function () {
+        // Wallet
+        Route::get('/wallet', [WalletController::class, 'index']);
+        Route::post('/wallet/topup', [WalletController::class, 'topup']);
+
+        // Addresses
+        Route::get('/addresses', [AddressController::class, 'index']);
+        Route::post('/addresses', [AddressController::class, 'store']);
+        Route::put('/addresses/{id}', [AddressController::class, 'update']);
+        Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
+
+        // Cart
+        Route::get('/cart', [CartController::class, 'index']);
+        Route::post('/cart/items', [CartController::class, 'addItem']);
+        Route::put('/cart/items/{itemId}', [CartController::class, 'updateItem']);
+        Route::delete('/cart/items/{itemId}', [CartController::class, 'removeItem']);
+        Route::delete('/cart', [CartController::class, 'clear']);
+
+        // Checkout
+        Route::post('/checkout', [OrderController::class, 'checkout']);
+        Route::get('/orders/buyer', [OrderController::class, 'buyerOrders']);
+    });
+
+    // Seller Specific Routes
+    Route::middleware('role:Seller')->group(function () {
+        Route::post('/store', [StoreController::class, 'store']);
+        Route::get('/store/my', [StoreController::class, 'myStore']);
+
+        Route::post('/products', [ProductController::class, 'store']);
+        Route::put('/products/{id}', [ProductController::class, 'update']);
+        Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+
+        // Incoming orders
+        Route::get('/orders/seller', [OrderController::class, 'sellerOrders']);
+    });
 });
